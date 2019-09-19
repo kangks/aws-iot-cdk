@@ -28,8 +28,9 @@ export class GreengrassDeploymentResetResource extends cdk.Construct {
         runtime: lambda.Runtime.PYTHON_3_7,
       })
 
+    // CDK tear down and recreate GG thus the resources ARN will changed in next update
     customHandler.addToRolePolicy(new PolicyStatement({
-        actions: [ 'greengrass:*' ],
+        actions: [ 'greengrass:*','iot:UpdateThingShadow' ],
         resources: [ '*' ],
      }));
 

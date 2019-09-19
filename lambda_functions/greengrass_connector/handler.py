@@ -31,7 +31,7 @@ config.dictConfig({
 logger = getLogger(__name__)
 
 while True:
-    logger.info('hello!!')
+    logger.info('hello!!!')
     time.sleep(5)
     
 def handler(event, context):

@@ -181,14 +181,14 @@ export default class GreengrassConstruct extends cdk.Construct {
               connectors: [
               {
                   id: '1',
-                  connectorArn: `arn:aws:greengrass:${region}::/connectors/ImageClassificationx86-64/versions/1`,
+                  connectorArn: `arn:aws:greengrass:${region}::/connectors/ImageClassificationx86-64/versions/2`,
                   parameters: {
                       MLModelDestinationPath: mlResourcePath,
                       MLModelResourceId: mlResourceId,
                       MLModelSageMakerJobArn: props.sageMakerJobArn,
                       LocalInferenceServiceName: "image-classification",
                       LocalInferenceServiceTimeoutSeconds: 15,
-                      LocalInferenceServiceMemoryLimitKB: 80000
+                      LocalInferenceServiceMemoryLimitKB: 512000
                   }
               }
               ]

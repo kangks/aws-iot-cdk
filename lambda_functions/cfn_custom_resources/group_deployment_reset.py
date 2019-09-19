@@ -20,10 +20,9 @@ def handler(event, context):
         # role_name = event["ResourceProperties"]["RoleName"]
         if event["RequestType"] == "Create":
             result = cfnresponse.SUCCESS
-        elif event["RequestType"] == "Update":
-            # No action required on Update
-            result = cfnresponse.SUCCESS
-        elif event["RequestType"] == "Delete":
+        # Update in CDK is a delete and create, thus need to reset the deployment to avoid error
+        # "This group is currently deployed, so it cannot be deleted."
+        elif event["RequestType"] == "Update" or event["RequestType"] == "Delete":
             group_id = event["ResourceProperties"].get("GroupId")    
             if group_id:
                 logger.info("Group id to delete: %s" % group_id)
