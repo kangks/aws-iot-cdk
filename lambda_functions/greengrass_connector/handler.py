@@ -2,6 +2,11 @@ from logging import config, getLogger
 import time
 import os
 
+from greengrass_machine_learning_sdk.exception import GreengrassDependencyException
+from greengrass_machine_learning_sdk.inference import GreengrassInferenceException
+from greengrass_machine_learning_sdk import client
+from greengrass_ipc_python_sdk.ipc_facade import GreengrassServiceCallOutput, GreengrassServiceMessage, GreengrassRuntimeException
+
 config.dictConfig({
   "version": 1,
   "disable_existing_loggers": False,
@@ -29,6 +34,7 @@ config.dictConfig({
 })
 
 logger = getLogger(__name__)
+inference_client = client('inference')
 
 while True:
     logger.info('hello!!!')
