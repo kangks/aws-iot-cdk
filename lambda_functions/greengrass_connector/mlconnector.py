@@ -12,11 +12,24 @@ CATEGORIES = ['ak47', 'american-flag', 'backpack', 'baseball-bat', 'baseball-glo
 
 source = image_source.ImageSource()
 client = greengrasssdk.client('iot-data')
-ml_client = ml.client('inference')
+inference_mlclient = ml.client('inference')
+feedback_mlclient = ml.client('feedback')
 
 log = logging.getLogger()
 thing_name = os.environ['THINGNAME']
 prediction_topic = "mli/predictions/{}".format(thing_name)
+feedback_config_id = "RandomSamplingConfiguration"
+
+def invoke_feedback_connector(content,model_prediction):
+    log.info("Invoking feedback connector.")
+    try:
+        feedback_mlclient.publish(
+            ConfigId=feedback_config_id,
+            ModelInput=content,
+            ModelPrediction=model_prediction
+        )
+    except Exception as e:
+        logging.info("Exception raised when invoking feedback connector:{}".format(e))
 
 def greengrass_long_run():
     log.debug('invoking Greengrass ML Inference using GG Connector')
@@ -24,7 +37,7 @@ def greengrass_long_run():
     try:
         content = source.get_image()        
 
-        resp = ml_client.invoke_inference_service(
+        resp = inference_mlclient.invoke_inference_service(
             AlgoType='image-classification',
             ServiceName='image-classification',
             ContentType='image/jpeg',
@@ -52,6 +65,9 @@ def greengrass_long_run():
 
         # Perform business logic that relies on the predictions_arr, which is an array
         # of probabilities.
+
+        # Uses ML Connector to call the Feedback connector directly
+        # invoke_feedback_connector(content,result)
 
     except ml.GreengrassInferenceException as e:
         logging.exception('inference exception {}("{}")'.format(e.__class__.__name__, e))

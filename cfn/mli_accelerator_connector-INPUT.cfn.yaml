@@ -14,6 +14,9 @@ Parameters:
   SageMakerJobArn:
     Description: ARN of SageMaker training job
     Type: String
+  FeedbackS3BucketName:
+    Description: S3 Bucket for feedback
+    Type: String
 
 Resources:
   #############################################################################
@@ -146,6 +149,22 @@ Resources:
               LocalInferenceServiceName: "image-classification"
               LocalInferenceServiceTimeoutSeconds: 15
               LocalInferenceServiceMemoryLimitKB: 512000
+              MLFeedbackConnectorConfigId: RandomSamplingConfiguration
+          - ConnectorArn: !Sub arn:aws:greengrass:${AWS::Region}::/connectors/MLFeedback/versions/1
+            Id: FeedbackConnector
+            Parameters: 
+              RequestLimit: 10
+              FeedbackConfigurationMap: !Sub "{
+                \"RandomSamplingConfiguration\":{
+                  \"s3-bucket-name\": \"${FeedbackS3BucketName}\",
+                  \"s3-prefix\": \"random\",
+                  \"content-type\": \"image/jpeg,image/png\",
+                  \"sampling-strategy\":{
+                      \"strategy-name\": \"RANDOM_SAMPLING\",
+                      \"rate\": 0.5
+                  }
+                }
+              }"
 
   #############################################################################
   # SUPPORTING RESOURCES SECTION
@@ -170,6 +189,9 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       CodeUri: ../lambda_functions/cfn_custom_resources  
+      Environment:
+        Variables:
+          STACK_NAME: !Ref "AWS::StackName"
   GroupDeploymentReset:
     # Allows for deletion of Greengrass group if the deployment status is not
     # reset manually via the console or API
@@ -188,10 +210,10 @@ Resources:
       Runtime: python3.7
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
+      CodeUri: ../lambda_functions/cfn_custom_resources
       Environment:
         Variables:
           STACK_NAME: !Ref "AWS::StackName"
-      CodeUri: ../lambda_functions/cfn_custom_resources
   # Roles
   LambdaExecutionRole:
     # Role used by CloudFormation created Lambda functions, used by the custom
@@ -267,7 +289,12 @@ Resources:
           - Effect: Allow
             Action:
             - sagemaker:*
-            Resource: "*"
+            Resource: !Ref SageMakerJobArn
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            Resource: 
+            - !Sub "arn:aws:s3:::${FeedbackS3BucketName}/*"
 Outputs:
   # Emit values needed for deployment status
   CommandToDeployGroup:
