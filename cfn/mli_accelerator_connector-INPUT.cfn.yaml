@@ -11,8 +11,8 @@ Parameters:
   CertIdParam:
     Description: ID of the activate AWS IoT certificate
     Type: String
-  SageMakerJobArn:
-    Description: ARN of SageMaker training job
+  TrainingJobNameContains:
+    Description: Partial names of the training job, typically the prefix
     Type: String
   FeedbackS3BucketName:
     Description: S3 Bucket for feedback
@@ -136,7 +136,7 @@ Resources:
           ResourceDataContainer:
             SageMakerMachineLearningModelResourceData: 
               DestinationPath: "/image-classification-ml"
-              SageMakerJobArn: !Ref SageMakerJobArn            
+              SageMakerJobArn: !GetAtt TrainingJobResource.SageMakerJobArn
 
   ConnectorDefinition:
     Type: AWS::Greengrass::ConnectorDefinition
@@ -149,7 +149,7 @@ Resources:
             Parameters: 
               MLModelDestinationPath: "/image-classification-ml"
               MLModelResourceId: "mlModelId"
-              MLModelSageMakerJobArn: !Ref SageMakerJobArn
+              MLModelSageMakerJobArn: !GetAtt TrainingJobResource.SageMakerJobArn
               LocalInferenceServiceName: "image-classification"
               LocalInferenceServiceTimeoutSeconds: 15
               LocalInferenceServiceMemoryLimitKB: 512000
@@ -227,6 +227,26 @@ Resources:
       Environment:
         Variables:
           STACK_NAME: !Ref "AWS::StackName"
+  TrainingJobResource:
+    # Gets the latest training job
+    Type: Custom::LatestTrainingJob
+    Properties:
+      ServiceToken: !GetAtt TrainingJobFunction.Arn
+      # Region: !Ref "AWS::Region"
+      TrainingJobNameContains: !Ref TrainingJobNameContains
+  TrainingJobFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-TrainingJobFunction
+      Description: Gets latest Training Job
+      Handler: get_latest_sagemaker_trainingjobs.handler
+      Runtime: python3.7
+      Role: !GetAtt CustomResourceTrainingJobLambdaExecutionRole.Arn
+      Timeout: 60
+      CodeUri: ../lambda_functions/cfn_custom_resources
+      Environment:
+        Variables:
+          STACK_NAME: !Ref "AWS::StackName"
   # Roles
   LambdaExecutionRole:
     # Role used by CloudFormation created Lambda functions, used by the custom
@@ -272,6 +292,35 @@ Resources:
             - iam:DeleteRole
             - iam:PassRole
             Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/greengrass_cfn_${AWS::StackName}_ServiceRole"
+  # Roles
+  CustomResourceTrainingJobLambdaExecutionRole:
+    # Role used by CloudFormation created Lambda functions, used by the custom
+    # resource functions to perform their objectives.
+    # Overly permissive for iot:* and greengrass:* to reduce Statement complexity
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - sagemaker:ListTrainingJobs
+            Resource: "*"
   GreengrassResourceRole:
     # Role for deployed Lambda functions to a Greengrass core to call other
     # AWS services directly
@@ -302,7 +351,7 @@ Resources:
           - Effect: Allow
             Action:
             - sagemaker:*
-            Resource: !Ref SageMakerJobArn
+            Resource: !GetAtt TrainingJobResource.SageMakerJobArn
           - Effect: Allow
             Action:
             - s3:PutObject
@@ -316,3 +365,6 @@ Outputs:
   GreengrassConfig:
     Description: "Config file contents (copy and paste into local config.json file and modify"
     Value: !GetAtt IoTThing.configJSON
+  SageMakerTrainingJobArn:
+    Description: Training job ARN used by the Greengrass Connector
+    Value: !GetAtt TrainingJobResource.SageMakerJobArn
