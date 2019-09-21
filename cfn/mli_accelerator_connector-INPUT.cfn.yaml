@@ -114,9 +114,13 @@ Resources:
       InitialVersion:
         # Example of one-to-many subscriptions in single definition version
         Subscriptions:
-          - Id: Subscription1
+          - Id: predictionSubscription
             Source: !Ref PredictionFunction.Alias
             Subject: !Sub mli/predictions/${CoreName}
+            Target: 'cloud'
+          - Id: feedbackPredictionSubscription
+            Source: !Sub "arn:aws:greengrass:${AWS::Region}::/connectors/MLFeedback/versions/1"
+            Subject: "feedback/message/prediction"
             Target: 'cloud'
   ResourceDefinition:
     Type: AWS::Greengrass::ResourceDefinition
@@ -149,21 +153,30 @@ Resources:
               LocalInferenceServiceName: "image-classification"
               LocalInferenceServiceTimeoutSeconds: 15
               LocalInferenceServiceMemoryLimitKB: 512000
-              MLFeedbackConnectorConfigId: RandomSamplingConfiguration
+              MLFeedbackConnectorConfigId: LC50
           - ConnectorArn: !Sub arn:aws:greengrass:${AWS::Region}::/connectors/MLFeedback/versions/1
             Id: FeedbackConnector
             Parameters: 
               RequestLimit: 10
               FeedbackConfigurationMap: !Sub "{
-                \"RandomSamplingConfiguration\":{
+                \"LC50\":{
                   \"s3-bucket-name\": \"${FeedbackS3BucketName}\",
-                  \"s3-prefix\": \"random\",
+                  \"s3-prefix\": \"confidence-lower-than-50\",
                   \"content-type\": \"image/jpeg,image/png\",
                   \"sampling-strategy\":{
-                      \"strategy-name\": \"RANDOM_SAMPLING\",
-                      \"rate\": 0.5
+                      \"strategy-name\": \"LEAST_CONFIDENCE\",
+                      \"threshold\": 0.5
                   }
-                }
+                },
+                \"LC40\":{
+                  \"s3-bucket-name\": \"${FeedbackS3BucketName}\",
+                  \"s3-prefix\": \"confidence-lower-than-40\",
+                  \"content-type\": \"image/jpeg,image/png\",
+                  \"sampling-strategy\":{
+                      \"strategy-name\": \"LEAST_CONFIDENCE\",
+                      \"threshold\": 0.4
+                  }
+                }                
               }"
 
   #############################################################################
