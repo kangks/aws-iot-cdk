@@ -168,13 +168,13 @@ Resources:
                       \"threshold\": 0.5
                   }
                 },
-                \"LC40\":{
+                \"Entropy\":{
                   \"s3-bucket-name\": \"${FeedbackS3BucketName}\",
-                  \"s3-prefix\": \"confidence-lower-than-40\",
+                  \"s3-prefix\": \"entropy\",
                   \"content-type\": \"image/jpeg,image/png\",
                   \"sampling-strategy\":{
-                      \"strategy-name\": \"LEAST_CONFIDENCE\",
-                      \"threshold\": 0.4
+                      \"strategy-name\": \"ENTROPY\",
+                      \"threshold\": 0.0
                   }
                 }                
               }"
