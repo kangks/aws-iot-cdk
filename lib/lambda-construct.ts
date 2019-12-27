@@ -15,7 +15,7 @@ export default class LambdaConstruct extends cdk.Construct {
             code: Code.fromAsset(
                 path.join(__dirname, '..', 'lambda_functions', 'greengrass_connector'),
             ),
-            handler: 'handler.handler',
+            handler: 'mlconnector.handler',
         });
         const version = lambda.addVersion('GreengrassMLIVersion');
 
